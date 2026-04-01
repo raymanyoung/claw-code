@@ -1,0 +1,308 @@
+{
+  "repo_notes": [
+    {
+      "content": "本 Wiki 以中文撰写。claw-code 是 Claude Code 的 clean-room rewrite 项目，从泄露的 TypeScript 源码中提取架构模式，用 Python 和 Rust 从零重新实现，不复制任何专有代码。",
+      "author": null
+    },
+    {
+      "content": "注意：1. 所有对代码和机制的描述或举例，必须要在代码库中找到对应的文件及代码片段，不要杜撰不存在的概念。2. 本项目为双轨实现：Python 版本（src/）用于快速迭代验证， Rust 版本（rust/crates/）为最终生产版本",
+      "author": null
+    },
+    {
+      "content": "重要目录： 1. src/tools.py - 180+ 工具定义; 2. src/commands.py - 170+ 命令定义; 3. src/reference_data/subsystems/ - 27 个子系统配置; 4. rust/crates/runtime/src/conversation.rs - 工具调用循环核心; 5. rust/crates/api/src/types.rs - API 类型定义",
+      "author": null
+    }
+  ],
+  "pages": [
+    {
+      "title": "仓库概览",
+      "purpose": "总体介绍仓库结构、 src/（Python）和 rust/crates/（Rust） 目录以及主要技术栈",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 目录结构: src/, rust/crates/, tests/, assets/\n- 技术栈: Python 3.x, Rust (Cargo), Anthropic Messages API\n- 核心模块: 工具系统、 命令系统、 运行时、 API 层",
+          "author": null
+        },
+        {
+          "content": "src/ 包含 60+ Python 文件，涵盖工具、命令、 运行时、 API 等核心模块\nrust/crates/ 包含 5 个 crate: api, commands, compat-harness, runtime, rusty-claude-cli, tools",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "Python 移植工作区",
+      "purpose": "Python 端的核心架构: port_manifest, models, commands, tools, query_engine, main 的职责与协作",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- port_manifest.py: 递归扫描 src/ 树，生成移植清单\n- models.py: 数据模型定义\n- commands.py: 命令注册表\n- tools.py: 工具注册表\n- query_engine.py: 查询引擎,渲染 Markdown 报告\n- main.py: CLI 入口",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 运行 `python3 -m src.main summary` 生成完整移植报告\n- 运行 `python3 -m src.main manifest` 输出当前工作区清单\n- 运行 `python3 -m src.main subsystems --limit 16` 列出前 16 个子系统",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "Rust Crates 架构",
+      "purpose": "Rust 端的 5 个 crate 的架构与职责分工",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- api/: Anthropic Messages API 客户端 + SSE 流式处理\n- commands/: 斜杠命令元数据定义\n- compat-harness/: 上游 TypeScript 清单提取\n- runtime/: 会话管理、 配置、 提示词编排\n- rusty-claude-cli/: 主 CLI 二进制\n- tools/: 内置工具实现",
+          "author": null
+        },
+        {
+          "content": "示例:\n- api/src/types.rs 定义 MessageRequest, MessageResponse, ToolDefinition\n- runtime/src/conversation.rs 实现 run_turn() 循环\n- tools/src/lib.rs 定义 ToolSpec 和 ToolExecutor trait",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "工具系统",
+      "purpose": "180+ 工具的定义、注册与实现机制",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 工具定义格式: name, description, input_schema\n- 工具注册: PORTED_TOOLS 静态列表\n- 工具分类: 文件操作、 bash 执行、 搜索、 MCP 工具等\n- 相关目录: src/tools.py, src/reference_data/tools_snapshot.json",
+          "author": null
+        },
+        {
+          "content": "示例:\n- bash 工具: 定义 command 参数, 执行 shell 命令\n- read_file 工具: 定义 path, limit 参数, 读取文件内容\n- edit_file 工具: 定义 file_path, edits 参数, 编辑文件",
+          "author": null
+        },
+        {
+          "content": "工具通过 JSON Schema 定义参数格式, 传递给 Anthropic API 的 tools 字段",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "命令系统",
+      "purpose": "170+ 斜杠命令的定义与注册机制",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 命令定义格式: name, description, usage\n- 命令注册: PORTED_COMMANDS 静态列表\n- 命令分类: 短命令 (/status, /model) 和长命令 (/permissions, /terminal-setup)\n- 相关目录: src/commands.py, src/reference_data/commands_snapshot.json",
+          "author": null
+        },
+        {
+          "content": "示例:\n- /status: 显示当前会话状态\n- /model: 切换模型\n- /commit: 提交代码\n- /doctor: 诊断检查",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "子系统架构",
+      "purpose": "27 个子系统的组织结构与职责",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 子系统定义: assistant, coordinator, bootstrap, mcp 等\n- 每个子系统包含: commands/, hooks/, tools/ 配置\n- 子系统用于组织功能模块, 支持独立开发\n- 相关目录: src/reference_data/subsystems/",
+          "author": null
+        },
+        {
+          "content": "示例:\n- assistant 子系统: AI 助手核心逻辑\n- coordinator 子系统: 任务协调器\n- bootstrap 子系统: 启动引导\n- mcp 子系统: Model Context Protocol 客户端",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "API 层",
+      "purpose": "Anthropic Messages API 的集成: 请求/响应结构、 流式处理、 认证",
+      "parent": "Rust Crates 架构",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- MessageRequest: model, max_tokens, messages, system, tools, tool_choice\n- MessageResponse: content, stop_reason, usage\n- ContentBlock: Text, ToolUse, ToolResult\n- SSE 流式: 事件流解析\n- 相关目录: rust/crates/api/src/types.rs, rust/crates/api/src/client.rs",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 发送消息: 构造 MessageRequest, 设置 tools 字段, 调用 API\n- 接收响应: 解析 content blocks, 提取 text 或 tool_use\n- 流式处理: 逐个事件处理, 实时显示文本",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "Tool Calling 机制",
+      "purpose": "AI 调用工具的完整流程: 定义 → 传递 → 决策 → 执行 → 返回 → 循环",
+      "parent": "Rust Crates 架构",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 步骤 1: 工具定义 (JSON Schema)\n- 步骤 2: 传递给 LLM (tools 字段)\n- 步骤 3: LLM 返回 tool_use\n- 步骤 4: 运行时执行工具\n- 步骤 5: 返回 tool_result\n- 步骤 6: LLM 继续处理或结束\n- 相关目录: rust/crates/runtime/src/conversation.rs, rust/crates/tools/src/lib.rs",
+          "author": null
+        },
+        {
+          "content": "示例:\n- bash 工具调用: LLM 返回 {\"type\": \"tool_use\", \"name\": \"bash\", \"input\": {\"command\": \"ls -la\"}}\n- 运行时执行: execute_tool(\"bash\", {\"command\": \"ls -la\"})\n- 返回结果: {\"type\": \"tool_result\", \"content\": \"文件列表...\"}",
+          "author": null
+        },
+        {
+          "content": "核心方法: conversation.rs 的 run_turn() 实现主循环, 最大迭代次数默认 16 次",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "权限系统",
+      "purpose": "工具执行前的权限检查: 三种模式与实现",
+      "parent": "Rust Crates 架构",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 权限模式: ReadOnly, WorkspaceWrite, DangerFullAccess\n- 权限检查: 执行工具前调用 PermissionPolicy.authorize()\n- 用户确认: 敏感操作需要用户批准\n- 相关目录: rust/crates/runtime/src/permissions.rs, src/permissions.py",
+          "author": null
+        },
+        {
+          "content": "示例:\n- ReadOnly: 只允许读取操作\n- WorkspaceWrite: 允许在工作区写入\n- DangerFullAccess: 完全访问权限（需用户确认）",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "运行时系统",
+      "purpose": "会话管理、 配置加载、 提示词构建",
+      "parent": "Rust Crates 架构",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 会话管理: SessionStore, 会话生命周期\n- 配置加载: 从文件加载配置\n- 提示词构建: 动态生成系统提示\n- 状态管理: 对话历史、 上下文\n- 相关目录: rust/crates/runtime/src/runtime.rs, rust/crates/runtime/src/session_store.rs",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 创建会话: SessionStore::new_session()\n- 加载配置: load_config() 返回配置对象\n- 构建提示: build_system_prompt() 拼接动态和静态部分",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "CLI 参考",
+      "purpose": "所有 CLI 命令的完整参考",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- Python CLI: python3 -m src.main [command]\n- Rust CLI: cargo run --package rusty-claude-cli -- [command]\n- 通用选项: --limit, --help\n- 子命令: summary, manifest, subsystems, parity-audit, commands, tools",
+          "author": null
+        },
+        {
+          "content": "示例:\n- python3 -m src.main summary: 生成移植摘要\n- python3 -m src.main manifest: 输出工作区清单\n- python3 -m src.main subsystems --limit 16: 列出前 16 个子系统",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "测试系统",
+      "purpose": "测试套件的结构与运行",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 测试文件: tests/test_porting_workspace.py\n- 测试框架: unittest\n- 测试内容: 文件计数、 摘要内容、 CLI 执行\n- 运行测试: python3 -m unittest discover -s tests -v",
+          "author": null
+        },
+        {
+          "content": "示例:\n- test_manifest_counts_python_files: 验证 Python 文件数 >= 7\n- test_query_engine_summary_mentions_workspace: 验证摘要包含关键章节\n- test_cli_summary_runs: 子进程集成测试",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "背景故事",
+      "purpose": "项目起源: 2026年3月31日凌晨4点的 Claude Code 源码泄露事件",
+      "parent": "仓库概览",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- 时间点: 2026年3月31日凌晨4点\n- 事件: Claude Code 源码被泄露\n- 决定: 进行 clean-room rewrite, 在日出前推送代码\n- 方法: 从泄露的 TS 源码提取架构模式, 用 Python/Rust 重新实现\n- 相关文件: README.md, 2026-03-09-is-legal-the-same-as-legitimate-ai-reimplementation-and-the-erosion-of-copyleft.md",
+          "author": null
+        },
+        {
+          "content": "作者背景:\n- 被 WSJ 报道的 Claude Code 重度用户\n- 单人使用了 250 亿 tokens\n- 参加了 Claude Code 一周年派对",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "MCP 集成",
+      "purpose": "Model Context Protocol 客户端实现",
+      "parent": "工具系统",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- MCP 工具: 用于调用 MCP 服务器提供的工具\n- 工具发现: 动态发现和注册 MCP 工具\n- 协议: MCP 协议的请求/响应格式\n- 相关目录: src/reference_data/subsystems/mcp/",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 连接 MCP 服务器: 启动时发现可用工具\n- 调用 MCP 工具: 通过 MCPTool 执行远程工具",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "数据模型",
+      "purpose": "核心数据结构定义: Subsystem, PortingModule, PortingBacklog, PortingTask",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- Subsystem: 子系统定义, 包含 commands, hooks, tools\n- PortingModule: 移植模块, 包含 name, status, notes\n- PortingBacklog: 移植积压, 管理待移植模块\n- PortingTask: 移植任务, 具体实现步骤\n- 相关目录: src/models.py, src/task.py",
+          "author": null
+        },
+        {
+          "content": "示例:\n- PortingModule status: planned, implemented\n- summary_lines() 方法生成报告摘要",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "移植清单",
+      "purpose": "port_manifest.py 的实现: 递归扫描、 分组、 序列化",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- build_port_manifest(): 递归扫描 src/ 树\n- 分组: 将文件分组到顶层模块\n- 元数据: 从 notes 文件加载模块说明\n- PortManifest: frozen dataclass, 包含 to_markdown() 序列化\n- 相关目录: src/port_manifest.py",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 扫描 src/assistant/ 目录, 生成 assistant 模块清单\n- 扫描 src/tools.py, 生成 tools 模块信息",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "查询引擎",
+      "purpose": "query_engine.py 的实现: 组装报告",
+ 渲染 Markdown",
+      "parent": "Python 移植工作区",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- QueryEnginePort: 查询引擎 dataclass\n- from_workspace(): 工厂方法, 从工作区构建引擎\n- render_summary(): 渲染完整移植报告\n- 报告组成: Port Manifest + Command surface + Tool surface\n- 相关目录: src/query_engine.py",
+          "author": null
+        },
+        {
+          "content": "示例:\n- render_summary() 输出包含: 工作区概览、 命令统计、 工具统计、 子系统列表",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "OmX 工作流",
+      "purpose": "oh-my-codex (OmX) 辅助的开发工作流",
+      "parent": "背景故事",
+      "page_notes": [
+        {
+          "content": "内容提纲:\n- $team 模式: 并行代码审查和架构反馈\n- $ralph 模式: 持久执行、 验证和完成\n- Codex 驱动: 将 src/ 树转换为 Python-first 工作区\n- 相关文件: assets/omx/omx-readme-review-1.png, assets/omx/omx-readme-review-2.png",
+          "author": null
+        },
+        {
+          "content": "示例:\n- 使用 $team 模式审查 README 和 essay\n- 使用 $ralph 模式执行完整的移植流程",
+          "author": null
+        }
+      ]
+    },
+    {
+      "title": "术语表",
+      "purpose": "定义所有代码库特定的术语、 缩写和概念",
+      "parent": null,
+      "page_notes": [
+        {
+          "content": "术语:\n- Clean-room rewrite: 从架构理解重新实现, 不复制源码\n- Harness Engineering: 研究代理系统如何连接工具、 编排任务、 管理运行时上下文\n- OmX: oh-my-codex, 基于 Codex 的工作流层\n- MCP: Model Context Protocol, 模型上下文协议\n- ReAct: Reasoning + Acting, 推理 + 行动循环\n- ToolUse: LLM 返回的工具调用请求\n- ToolResult: 工具执行结果返回给 LLM",
+          "author": null
+        }
+      ]
+    }
+  ]
+}
