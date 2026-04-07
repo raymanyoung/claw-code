@@ -264,8 +264,7 @@
     },
     {
       "title": "查询引擎",
-      "purpose": "query_engine.py 的实现: 组装报告",
- 渲染 Markdown",
+      "purpose": "query_engine.py 的实现: 组装报告、渲染 Markdown",
       "parent": "Python 移植工作区",
       "page_notes": [
         {
